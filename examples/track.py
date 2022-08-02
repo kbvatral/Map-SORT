@@ -6,7 +6,20 @@ import cv2
 import imutils
 import imutils.video
 import matplotlib.pyplot as plt
- 
+
+# Reference: https://stackoverflow.com/a/24522170/13231446
+def combine_frames(img1, img2):
+    h1, w1 = img1.shape[:2]
+    h2, w2 = img2.shape[:2]
+
+    #create empty matrix
+    vis = np.zeros((max(h1, h2), w1+w2,3), np.uint8)
+
+    #combine 2 images
+    vis[:h1, :w1,:3] = img1
+    vis[:h2, w1:w1+w2,:3] = img2
+
+    return vis
 
 video_path = "data/PETS09-S2L1.mp4"
 map_path = "data/map.png"
@@ -16,6 +29,7 @@ entry_polys_path = "data/entry_polys.txt"
 output_path = "PETS09-S1L1-track.txt"
 DISPLAY = True
 SAVE = False
+REPLAY_SPEED = 2
 
 # Load the point mapping file
 point_mapping = np.loadtxt(point_map_path, delimiter=",", dtype="int")
@@ -38,6 +52,7 @@ for line in lines:
 colors = [(255,0,0),(0,255,0),(0,0,255),(255,255,0),(255,0,255),(0,255,255)]
 map_img = cv2.imread(map_path)
 vs = cv2.VideoCapture(video_path)
+vwriter = cv2.VideoWriter('data/output.avi', cv2.VideoWriter_fourcc(*'DIVX'), REPLAY_SPEED*vs.get(cv2.CAP_PROP_FPS), (1080, 462) )
 frame_total = int(vs.get(cv2.CAP_PROP_FRAME_COUNT))
 all_dets = np.loadtxt(dets_path, delimiter=',')
 mapper = PixelMapper(pixel_arr, map_arr)
@@ -65,16 +80,19 @@ for frame_num in trange(1, frame_total, unit="frame"):
         output.append([frame_num, trk_id, box[0], box[1], box[2], box[3], map_point[0], map_point[1]])
 
         color = colors[trk_id%len(colors)]
-        cv2.rectangle(vis, (box[0], box[1]), (box[0]+box[2], box[1]+box[3]), color, 2)
+        cv2.rectangle(vis, (box[0,0], box[1,0]), (box[0,0]+box[2,0], box[1,0]+box[3,0]), color, 2)
         cv2.circle(map_vis, map_point, 10, color, -1)
     if DISPLAY:
-        vis = imutils.resize(vis, width=1080)
-        cv2.imshow("Frame", vis)
-        cv2.imshow("Map", map_vis)
-        if cv2.waitKey(0)&0xFF == ord("q"):
+        # vis = imutils.resize(vis, width=1080)
+        final_vis = combine_frames(vis, map_vis)
+        final_vis = imutils.resize(final_vis, width=1080)
+        cv2.imshow('Final frame', final_vis)
+        vwriter.write(final_vis)
+        if cv2.waitKey(1)&0xFF == ord("q"):
             break
 
 vs.release()
+vwriter.release()
 cv2.destroyAllWindows()
 
 if SAVE:
