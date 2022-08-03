@@ -23,13 +23,16 @@ def combine_frames(img1, img2):
 
 video_path = "data/PETS09-S2L1.mp4"
 map_path = "data/map.png"
-dets_path = "data/det.txt"
+dets_path = "data/PETS09-S2L1-detection.txt"
 point_map_path = "data/point_mapping.txt"
 entry_polys_path = "data/entry_polys.txt"
-output_path = "PETS09-S1L1-track.txt"
+tracking_output_path = "PETS09-S1L1-track.txt"
+video_output_path = "data/output.avi"
+
 DISPLAY = True
 SAVE = False
-REPLAY_SPEED = 2
+RENDER_SPEED = 2
+DISPLAY_HAULT = 40
 
 # Load the point mapping file
 point_mapping = np.loadtxt(point_map_path, delimiter=",", dtype="int")
@@ -52,7 +55,7 @@ for line in lines:
 colors = [(255,0,0),(0,255,0),(0,0,255),(255,255,0),(255,0,255),(0,255,255)]
 map_img = cv2.imread(map_path)
 vs = cv2.VideoCapture(video_path)
-vwriter = cv2.VideoWriter('data/output.avi', cv2.VideoWriter_fourcc(*'DIVX'), REPLAY_SPEED*vs.get(cv2.CAP_PROP_FPS), (1080, 462) )
+vwriter = None
 frame_total = int(vs.get(cv2.CAP_PROP_FRAME_COUNT))
 all_dets = np.loadtxt(dets_path, delimiter=',')
 mapper = PixelMapper(pixel_arr, map_arr)
@@ -68,7 +71,7 @@ for frame_num in trange(1, frame_total, unit="frame"):
 
     # Load the detections for this frame in MOT Challenge format for this example
     dets = all_dets[all_dets[:,0] == frame_num]
-    dets = [Detection(det[2:6], det[6]) for det in dets]
+    dets = [Detection(det[2:6], det[6]) for det in dets if int(det[1]) == 1]
 
     # Run the tracking
     trackers = mot.step(dets)
@@ -82,19 +85,25 @@ for frame_num in trange(1, frame_total, unit="frame"):
         color = colors[trk_id%len(colors)]
         cv2.rectangle(vis, (box[0,0], box[1,0]), (box[0,0]+box[2,0], box[1,0]+box[3,0]), color, 2)
         cv2.circle(map_vis, map_point, 10, color, -1)
+    
     if DISPLAY:
-        # vis = imutils.resize(vis, width=1080)
         final_vis = combine_frames(vis, map_vis)
         final_vis = imutils.resize(final_vis, width=1080)
         cv2.imshow('Final frame', final_vis)
-        vwriter.write(final_vis)
-        if cv2.waitKey(1)&0xFF == ord("q"):
+        if cv2.waitKey(DISPLAY_HAULT)&0xFF == ord("q"):
             break
 
+        if vwriter is None and SAVE:
+            h, w = final_vis.shape[:2]
+            vwriter = cv2.VideoWriter(video_output_path, cv2.VideoWriter_fourcc(*'DIVX'), RENDER_SPEED*vs.get(cv2.CAP_PROP_FPS), (w,h) )
+        if SAVE:
+            vwriter.write(final_vis)
+
 vs.release()
-vwriter.release()
+if vwriter is not None:
+    vwriter.release()
 cv2.destroyAllWindows()
 
 if SAVE:
     ret = np.array(output)
-    np.savetxt(output_path, ret, delimiter=",", fmt="%d")
+    np.savetxt(tracking_output_path, ret, delimiter=",", fmt="%d")
