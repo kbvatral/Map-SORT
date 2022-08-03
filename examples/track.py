@@ -59,7 +59,7 @@ vwriter = None
 frame_total = int(vs.get(cv2.CAP_PROP_FRAME_COUNT))
 all_dets = np.loadtxt(dets_path, delimiter=',')
 mapper = PixelMapper(pixel_arr, map_arr)
-mot = Map_SORT(mapper, entry_polys, max_age=900, min_hits=3, iou_threshold=0.7, limit_entry=False)
+mot = Map_SORT(mapper, entry_polys, max_age=900, min_hits=3, iou_threshold=0.7, limit_entry=True)
 
 output = []
 for frame_num in trange(1, frame_total, unit="frame"):

@@ -32,7 +32,7 @@ class Map_SORT(object):
             create = False
 
             # Only create if the map point is within an entry region
-            if self.limit_entry:
+            if self.frames > self.min_hits and self.limit_entry:
                 map_point = geo.Point(*self.pixel_mapper.detection_to_map(det, [0,1]))
                 for poly in self.entry_polys:
                     if poly.contains(map_point):
