@@ -48,7 +48,7 @@ class Map_SORT(object):
                         break
 
             if create:
-                trk = Tracklet(self.frames, self.tracklet_counter, det, self.min_hits)
+                trk = Tracklet(self.frames, self.tracklet_counter, det, self.pixel_mapper, self.min_hits)
                 new_trackers.append(trk)
                 self.tracklet_counter += 1
 
@@ -116,8 +116,8 @@ class Map_SORT(object):
             # If alive and not in probation, add it to the return
             if (self.frames < self.min_hits) or (trk.time_since_update == 0 and not trk.in_probation):
                 d = trk.get_bbox()
-                map_point = self.pixel_mapper.detection_to_map(d, [0,1])
-                ret.append((d, map_point, trk.trk_id))
+                map_point, map_vel = trk.get_map_point()
+                ret.append((d, map_point, map_vel, trk.trk_id))
 
         return ret
     

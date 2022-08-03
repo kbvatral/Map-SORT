@@ -33,6 +33,7 @@ DISPLAY = True
 SAVE = False
 RENDER_SPEED = 2
 DISPLAY_HAULT = 40
+VELOCITY_VECTOR_DISPLAY_SIZE = 20
 
 # Load the point mapping file
 point_mapping = np.loadtxt(point_map_path, delimiter=",", dtype="int")
@@ -77,7 +78,7 @@ for frame_num in trange(1, frame_total, unit="frame"):
     trackers = mot.step(dets)
 
     # Draw the output on the frame and map
-    for trk, map_point, trk_id in trackers:
+    for trk, map_point, map_vel, trk_id in trackers:
         box = trk.tlwh.astype("int")
         map_point = tuple([int(i) for i in np.squeeze(map_point)])
         output.append([frame_num, trk_id, box[0], box[1], box[2], box[3], map_point[0], map_point[1]])
@@ -85,6 +86,11 @@ for frame_num in trange(1, frame_total, unit="frame"):
         color = colors[trk_id%len(colors)]
         cv2.rectangle(vis, (box[0,0], box[1,0]), (box[0,0]+box[2,0], box[1,0]+box[3,0]), color, 2)
         cv2.circle(map_vis, map_point, 10, color, -1)
+
+        if map_vel is not None:
+            map_vel *= VELOCITY_VECTOR_DISPLAY_SIZE
+            end_point = map_point[0] + int(map_vel[0]), map_point[1] + int(map_vel[1])
+            cv2.arrowedLine(map_vis, map_point, end_point, color, 2)
     
     if DISPLAY:
         final_vis = combine_frames(vis, map_vis)
